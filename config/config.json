@@ -1,0 +1,17 @@
+{
+  "s3": {
+    "aws_access_key": "${aws_access_key}",
+    "aws_secret_key": "${aws_secret_key}",
+    "region": "${region_name}",
+    "path_prefix": "${tenant_path}"
+  },
+  "cassandra": {
+    "host": "${cassandra_host}",
+    "port": "${cassandra_port}",
+    "user": "${cassandra_user}",
+    "password": "${cassandra_password}",
+    "cert_file_path": "${cassandra_ssl_cert_file_path}",
+    "consistency":"${cassandra_consistency}",
+    "keyspace": "${cassandra_keyspace}"
+  }
+}
