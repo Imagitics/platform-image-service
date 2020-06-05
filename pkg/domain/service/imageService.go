@@ -32,6 +32,7 @@ func (instance *ImageService) Search(tenantID string, searchTerm string) (*model
 		SearchEngineID: searchEngineId,
 		SearchTerm:     searchTerm,
 		APIUrl:         apiUrl,
+		IncludeFace:    false,
 	}
 
 	instance.search(&searchRequest)
@@ -50,16 +51,15 @@ func (instace *ImageService) search(request *model.ImageRequest) (response *mode
 		os.Exit(1)
 	}
 
-	searchEngineId,_= url.QueryUnescape(searchEngineId)
-	key,_= url.QueryUnescape(key)
-
+	searchEngineId, _ = url.QueryUnescape(searchEngineId)
+	key, _ = url.QueryUnescape(key)
 
 	client := &http.Client{}
 	q := req.URL.Query()
 	q.Add("q", request.SearchTerm)
-	q.Add("cx",searchEngineId )
-	//q.Add("lr", "lang_en")
-	//q.Add("searchType", "image")
+	q.Add("cx", searchEngineId)
+	q.Add("lr", "lang_en")
+	q.Add("searchType", "image")
 	//q.Add("imgType", "face")
 	q.Add("key", key)
 	req.URL.RawQuery = q.Encode()
@@ -81,7 +81,7 @@ func (instace *ImageService) search(request *model.ImageRequest) (response *mode
 		_ = json.Unmarshal(body, &data)
 	}
 
-	fmt.Println(data.SearchInformation.TotalResults)
+	fmt.Println(data)
 
 	return &data
 }
