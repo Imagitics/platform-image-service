@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/gocql/gocql"
 	"github.com/nik/platform-image-service/pkg/domain/model"
-	"github.com/nik/platform-image-service/pkg/infra"
+	"github.com/nik/platform-image-service/pkg/infra/cassandra"
 )
 
 type CassandraAPIMetadataRepo struct {
@@ -12,8 +12,6 @@ type CassandraAPIMetadataRepo struct {
 }
 
 func NewCassandraAPIMetadataRepo(conn *cassandra.CassandraConn) *CassandraAPIMetadataRepo {
-	conn.Keyspace = "platform_image_db"
-	conn.Consistency = "QUORUM"
 	session := conn.InitSession()
 	repo := &CassandraAPIMetadataRepo{
 		session: session,
