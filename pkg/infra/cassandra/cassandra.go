@@ -16,6 +16,7 @@ type CassandraConn struct {
 	Consistency string
 	User        string
 	Password    string
+	CaPath      string
 }
 
 type Cassandra struct {
@@ -56,6 +57,9 @@ func (conn *CassandraConn) InitSession() *gocql.Session {
 	cluster.Authenticator = gocql.PasswordAuthenticator{
 		Username: conn.User,
 		Password: conn.Password,
+	}
+	cluster.SslOpts = &gocql.SslOptions{
+		CaPath: conn.CaPath,
 	}
 	cluster.ConnectTimeout = time.Second * 60
 	cluster.DisableInitialHostLookup = true
