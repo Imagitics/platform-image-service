@@ -2,7 +2,7 @@ package utility
 
 import (
 	"encoding/json"
-	"github.com/nik/Imagitics/platform-s3-plugin/config"
+	"github.com/nik/platform-image-service/config"
 	"os"
 )
 
