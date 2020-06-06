@@ -2,10 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/gorilla/mux"
 	"github.com/nik/platform-image-service/pkg/domain/repository"
 	"github.com/nik/platform-image-service/pkg/domain/service"
 	"github.com/nik/platform-image-service/pkg/infra/cassandra"
 	"github.com/nik/platform-image-service/utility"
+	"github.com/nik/platform-image-service/web/api/v1"
+	"log"
+	"net/http"
+	"time"
 )
 
 func main() {
@@ -31,6 +36,20 @@ func main() {
 	apiServiceInstance := service.NewAPIService(repoInstance)
 	//imageMetadataRepo:= repository.NewCassandraAPIMetadataRepo(conn)
 	imageSearch := service.NewImageService(apiServiceInstance)
-	//imageSearch.Search("TEST01", "cars",0, 10)
-	imageSearch.Search("TEST01", "computers")
+
+	//instantiate api object and routes
+	router := mux.NewRouter()
+	apiInstnace := v1.NewApi(router, imageSearch)
+	apiInstnace.InitializeRoutes()
+
+	//create a http server
+	srv := &http.Server{
+		Addr: ":8080",
+		// Good practice: enforce timeouts for servers you create!
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+		Handler:      router,
+	}
+	fmt.Println("Initializing http server")
+	log.Fatal(srv.ListenAndServe())
 }
