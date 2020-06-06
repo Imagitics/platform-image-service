@@ -76,4 +76,6 @@ type ImageRequest struct {
 	End            int
 	TotalResults   int
 	SearchEngineID string
+	Language       string
+	IncludeFace    bool
 }
