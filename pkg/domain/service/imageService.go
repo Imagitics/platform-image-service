@@ -35,8 +35,7 @@ func (instance *ImageService) Search(tenantID string, searchTerm string) (*model
 		IncludeFace:    false,
 	}
 
-	instance.search(&searchRequest)
-	return nil, error
+	return instance.search(&searchRequest), nil
 }
 
 func (instace *ImageService) search(request *model.ImageRequest) (response *model.ImageSearchResponse) {
