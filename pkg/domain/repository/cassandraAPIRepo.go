@@ -35,7 +35,9 @@ func (repo *CassandraAPIMetadataRepo) Get(tenantID string, apiName string) (*mod
 	m := map[string]interface{}{}
 	iter.MapScan(m)
 	apiMetadataInstance := model.APIMetadata{
-		Params: m["parameters"].(map[string]string),
+		TenantID: tenantID,
+		APIName:  apiName,
+		Params:   m["parameters"].(map[string]string),
 	}
 
 	return &apiMetadataInstance, nil
