@@ -39,10 +39,7 @@ func (instance *ImageService) Search(tenantID string, searchTerm string) (*model
 }
 
 func (instace *ImageService) search(request *model.ImageRequest) (response *model.ImageSearchResponse) {
-	key, apiUrl, searchEngineId, error := instace.apiService.GetAPIKeyUrlAndSearchEngineID(request.TenantID, apiName)
-	if error != nil {
-		return nil
-	}
+	key, apiUrl, searchEngineId := request.APIKey, request.APIUrl, request.SearchEngineID
 
 	//create instance of http request with apiurl
 	req, err := http.NewRequest("GET", apiUrl, nil)
