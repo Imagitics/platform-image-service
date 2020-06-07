@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-image-service
+  labels:
+    app: platform-image-service
+spec:
+  selector:
+    matchLabels:
+      app: platform-image-service
+      role: master
+      tier: backend
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: platform-image-service
+        role: master
+        tier: backend
+    spec:
+      containers:
+        - name: platform-image-service-container
+          image: nikbhi15docker/platform-image-service
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 2000Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: platform-image-service-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform-image-service-lb
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: alb
+  labels:
+    app: platform-image-service
+    tier: backend
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8080
+  selector:
+    app: platform-image-service
+    tier: backend
+
