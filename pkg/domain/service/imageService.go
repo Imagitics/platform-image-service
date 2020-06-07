@@ -2,8 +2,10 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/nik/platform-image-service/pkg/domain/model"
+	"github.com/nik/platform-image-service/pkg/domain/repository"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -11,9 +13,12 @@ import (
 )
 
 const apiName = "google_image_search_api"
+const maxImages = 1000
+const batchSize = 10
 
 type ImageService struct {
 	apiService *APIService
+	repo       repository.CassandraImageStoreMetadataRepo
 }
 
 func NewImageService(apiServiceInstance *APIService) (imageSearchInstance *ImageService) {
@@ -80,4 +85,48 @@ func (instace *ImageService) search(request *model.ImageRequest) (response *mode
 	fmt.Println(data)
 
 	return &data
+}
+
+func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm string, searchTermAlias string) error {
+	//retrieve api metadata for this tenant
+	apiKey, apiUrl, searchEngineId, error := instance.apiService.GetAPIKeyUrlAndSearchEngineID(tenantID, apiName)
+
+	if error != nil {
+		return errors.New("Unauthorized request")
+	}
+
+	//check whether images for this requests already exist
+	//validate whether any delta is remaining
+	//by default support only maxImages to store
+	prevSearchResults, err := instance.repo.Get(tenantID, searchTerm, searchTermAlias)
+	if err != nil {
+		return err
+	}
+
+	imageCount := prevSearchResults.ImageCount
+	if imageCount < maxImages {
+		return nil
+	} else {
+		//search images and start storing images
+		storeUrlByImageTitle := map[string]string{}
+		for counter := imageCount; counter < maxImages; counter = counter + 10 {
+			searchRequest := &model.ImageRequest{TenantID: tenantID,
+				APIKey:         apiKey,
+				SearchEngineID: searchEngineId,
+				SearchTerm:     searchTerm,
+				APIUrl:         apiUrl,
+				Start:          imageCount,
+				End:            imageCount + 10,
+				IncludeFace:    false,
+			}
+
+			//invoke search api with searchRequest
+			imageRes := instance.search(searchRequest)
+			for counter := 0; counter < len(imageRes.Items); counter++ {
+				imageTitle := imageRes.Items[counter].Title
+				storeUrlByImageTitle[imageTitle] = imageRes.Items[counter].Link
+			}
+		}
+	}
+	return nil
 }
