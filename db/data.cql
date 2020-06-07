@@ -8,12 +8,12 @@ CREATE TYPE platform_image_db.image_store_data (
 
 CREATE TABLE platform_image_db.image_metadata
 (tenant_id text,
- term text,
- store_alias text,
+ search_term text,
+ search_term_alias text,
  store_type text,
  image_store_by_title map<text,text>,
  image_count int,
- PRIMARY KEY (tenant_id, term));
+ PRIMARY KEY (tenant_id, search_term, search_term_alias));
 
 CREATE TABLE platform_image_db.api_metadata
 (tenant_id text,
