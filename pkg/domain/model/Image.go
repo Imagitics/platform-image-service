@@ -78,4 +78,5 @@ type ImageRequest struct {
 	SearchEngineID string
 	Language       string
 	IncludeFace    bool
+	ImagesToSearch int
 }
