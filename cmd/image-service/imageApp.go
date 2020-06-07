@@ -32,9 +32,8 @@ func main() {
 		CaPath:      config.Cassandra.SSLCertPath,
 	}
 	//create repoinstance
-	repoInstance := repository.NewCassandraAPIMetadataRepo(conn)
-	apiServiceInstance := service.NewAPIService(repoInstance)
-	//imageMetadataRepo:= repository.NewCassandraAPIMetadataRepo(conn)
+	repoAPIMetadataInstance := repository.NewCassandraAPIMetadataRepo(conn)
+	apiServiceInstance := service.NewAPIService(repoAPIMetadataInstance)
 	imageSearch := service.NewImageService(apiServiceInstance)
 
 	//instantiate api object and routes
