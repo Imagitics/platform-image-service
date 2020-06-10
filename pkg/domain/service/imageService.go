@@ -1,29 +1,38 @@
 package service
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nik/platform-image-service/config"
 	"github.com/nik/platform-image-service/pkg/domain/model"
 	"github.com/nik/platform-image-service/pkg/domain/repository"
+	"github.com/nik/platform-image-service/utility"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 )
 
 const apiName = "google_image_search_api"
-const maxImages = 1000
+const maxImages = 20
 const batchSize = 10
+const rootBucketName = "imagiticstest01"
 
 type ImageService struct {
 	apiService *APIService
-	repo       repository.CassandraImageStoreMetadataRepo
+	repo       repository.ImageStore
+	config     *config.ConfigModel
 }
 
-func NewImageService(apiServiceInstance *APIService) (imageSearchInstance *ImageService) {
+func NewImageService(apiServiceInstance *APIService, imageStoreMetadataRepo repository.ImageStore, config *config.ConfigModel) (imageSearchInstance *ImageService) {
 	return &ImageService{
 		apiService: apiServiceInstance,
+		repo:       imageStoreMetadataRepo,
+		config:     config,
 	}
 }
 
@@ -61,6 +70,12 @@ func (instace *ImageService) search(request *model.ImageRequest) (response *mode
 	q.Add("cx", searchEngineId)
 	q.Add("lr", "lang_en")
 	q.Add("searchType", "image")
+	if request.Start != 0 {
+		q.Add("start", strconv.Itoa(request.Start))
+	}
+	if request.ImagesToSearch != 0 {
+		q.Add("num", strconv.Itoa(request.ImagesToSearch))
+	}
 	//q.Add("imgType", "face")
 	q.Add("key", key)
 	req.URL.RawQuery = q.Encode()
@@ -104,29 +119,77 @@ func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm
 	}
 
 	imageCount := prevSearchResults.ImageCount
-	if imageCount < maxImages {
+	if imageCount >= maxImages {
 		return nil
 	} else {
 		//search images and start storing images
 		storeUrlByImageTitle := map[string]string{}
-		for counter := imageCount; counter < maxImages; counter = counter + 10 {
+		rootFilePath := "/tmp/s3upload/"
+		fileFormat := ".jpg"
+		os.Mkdir(rootFilePath, 0777)
+		for counter := 1; counter < maxImages; counter = counter + batchSize {
 			searchRequest := &model.ImageRequest{TenantID: tenantID,
 				APIKey:         apiKey,
 				SearchEngineID: searchEngineId,
 				SearchTerm:     searchTerm,
 				APIUrl:         apiUrl,
-				Start:          imageCount,
-				End:            imageCount + 10,
+				Start:          counter,
 				IncludeFace:    false,
 			}
 
 			//invoke search api with searchRequest
 			imageRes := instance.search(searchRequest)
+
 			for counter := 0; counter < len(imageRes.Items); counter++ {
 				imageTitle := imageRes.Items[counter].Title
+				instance.uploadImageToStore(tenantID, searchTermAlias, imageRes.Items[counter].Link, rootFilePath+strconv.Itoa(counter)+fileFormat)
 				storeUrlByImageTitle[imageTitle] = imageRes.Items[counter].Link
 			}
 		}
+		os.Remove(rootFilePath)
 	}
 	return nil
+}
+
+func (instance *ImageService) uploadImageToStore(tenantID string, searchTermAlias string, linkUrl string, filePath string) (int, error) {
+	s3FileUploadReq := &model.S3UploadRequest{
+		Bucket:    rootBucketName + tenantID,
+		TenantId:  tenantID,
+		Directory: searchTermAlias,
+	}
+
+	e, err := json.Marshal(s3FileUploadReq)
+	if err != nil {
+		return http.StatusBadRequest, errors.New("Invalid request")
+	}
+	//continue to s3 upload operation
+	extraParams := map[string]string{
+		"request": string(e),
+	}
+
+	//download file and upload to s3
+	err = utility.DownloadFile(filePath, linkUrl)
+	if err != nil {
+		fmt.Println("Error in downloading the file")
+	}
+	request, err := utility.NewfileUploadRequest(instance.config.Platform_S3_URL, extraParams, "entity", filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := &http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		body := &bytes.Buffer{}
+		_, err := body.ReadFrom(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		resp.Body.Close()
+		fmt.Println(resp.StatusCode)
+		fmt.Println(resp.Header)
+		fmt.Println(body)
+	}
+	return http.StatusCreated, nil
 }
