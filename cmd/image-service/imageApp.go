@@ -34,7 +34,8 @@ func main() {
 	//create repoinstance
 	repoAPIMetadataInstance := repository.NewCassandraAPIMetadataRepo(conn)
 	apiServiceInstance := service.NewAPIService(repoAPIMetadataInstance)
-	imageSearch := service.NewImageService(apiServiceInstance)
+	repoImageStoreInstance := repository.NewCassandraImageStoreMetadataRepo(conn)
+	imageSearch := service.NewImageService(apiServiceInstance, repoImageStoreInstance, config)
 
 	//instantiate api object and routes
 	router := mux.NewRouter()
