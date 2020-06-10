@@ -19,5 +19,5 @@ CREATE TABLE platform_image_db.api_metadata
 (tenant_id text,
  api_name text,
  parameters map<text,text>,
- PRIMARY KEY (tenant_id));
+ PRIMARY KEY (tenant_id, api_name));
 
