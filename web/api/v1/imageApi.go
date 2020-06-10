@@ -26,9 +26,6 @@ func NewApi(router *mux.Router, imageService *service.ImageService) *Api {
 
 	return s3Handler
 }
-func S3RegistrationHander(w http.ResponseWriter, r *http.Request) {
-
-}
 
 // It is search handler for searching the images based on search term
 func (api *Api) search(w http.ResponseWriter, r *http.Request) {
@@ -56,6 +53,22 @@ func (api *Api) search(w http.ResponseWriter, r *http.Request) {
 				SearchUrls: urls,
 			}
 			respondWithJSON(w, http.StatusOK, imageSearchResponse)
+		}
+	}
+}
+
+//collectImages collects images for the search term and upload to store type
+func (api *Api) collectImages(w http.ResponseWriter, r *http.Request) {
+	imageSearchRequest, errorCode, err := validateAndRetriveSearchRequest(r)
+	if err != nil {
+		respondWithJSON(w, errorCode, fmt.Sprintf(err.Error()))
+	} else {
+		searchTermAlias := retrieveSearchTermAlias(r, imageSearchRequest)
+		err := api.imageSearchService.SearchAndCollectImages(imageSearchRequest.TenantID, imageSearchRequest.SearchTerm, searchTermAlias)
+		if err != nil {
+			respondWithJSON(w, http.StatusInternalServerError, fmt.Sprintf("No results found for search term %s", imageSearchRequest.SearchTerm))
+		} else {
+			respondWithJSON(w, http.StatusOK, fmt.Sprintf("Request successfully accepted"))
 		}
 	}
 }
@@ -91,8 +104,8 @@ func retrieveIncludeFace(includeFace string) (bool, error) {
 	return false, errors.New("Invalid include_face argument")
 }
 
-// validateAndRetriveSearchRequest validates the search request
-// It validates and retrieves tenant identifier and search term
+//validateAndRetriveSearchRequest validates the search request
+//It validates and retrieves tenant identifier and search term
 func validateAndRetriveSearchRequest(r *http.Request) (*model.SearchAPIImageRequest, int, error) {
 	// validate tenant
 	vars := mux.Vars(r)
@@ -139,7 +152,20 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 func (a *Api) InitializeRoutes() {
 	//a.router.HandleFunc("/s3/images/{id:[0-9]+}", a.getProducts).Methods("GET")
 	a.router.HandleFunc("/{tenant_id}/images/search", a.search).Methods("GET")
+	a.router.HandleFunc("/{tenant_id}/images/collect", a.collectImages).Methods("GET")
 	//a.Router.HandleFunc("/product/{id:[0-9]+}", a.getProduct).Methods("GET")
 	//a.Router.HandleFunc("/product/{id:[0-9]+}", a.updateProduct).Methods("PUT")
 	//a.Router.HandleFunc("/product/{id:[0-9]+}", a.deleteProduct).Methods("DELETE")
+}
+
+//retrieveSearchTermAlias validates the search term alias
+func retrieveSearchTermAlias(r *http.Request, model *model.SearchAPIImageRequest) string {
+	// validate tenant
+	vars := mux.Vars(r)
+	searchTermAlias := vars["searchTermAlias"]
+	if searchTermAlias == "" {
+		searchTermAlias = model.SearchTerm
+	}
+
+	return searchTermAlias
 }
