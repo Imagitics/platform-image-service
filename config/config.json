@@ -1,10 +1,5 @@
 {
-  "s3": {
-    "aws_access_key": "${aws_access_key}",
-    "aws_secret_key": "${aws_secret_key}",
-    "region": "${region_name}",
-    "path_prefix": "${tenant_path}"
-  },
+  "platform_s3_service_url": "${platform_s3_service_url}",
   "cassandra": {
     "host": "${cassandra_host}",
     "port": "${cassandra_port}",
