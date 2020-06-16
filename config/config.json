@@ -8,5 +8,9 @@
     "cert_file_path": "${cassandra_ssl_cert_file_path}",
     "consistency":"${cassandra_consistency}",
     "keyspace": "${cassandra_keyspace}"
+  },
+  "logger": {
+    "logger_file_path": "/etc/log",
+    "logger_file_name": "platform_image_service.log"
   }
 }

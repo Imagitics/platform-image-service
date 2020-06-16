@@ -11,4 +11,10 @@ type ConfigModel struct {
 		Consistency string `json:"consistency"`
 		Keyspace    string `json:"keyspace"`
 	}
+	Logger *Logger
+}
+
+type Logger struct {
+	LoggerFilePath string `json:"logger_file_path"`
+	LoggerFileName string `json:"logger_file_name"`
 }
