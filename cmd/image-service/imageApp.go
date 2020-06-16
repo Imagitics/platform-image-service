@@ -23,8 +23,8 @@ func main() {
 		fmt.Println("Error in loading configuration - ", err)
 	}
 
-	logger.InitLogger(config.Logger)
-	logger.Logger.Info("Logger is successfully initialized")
+	logger := logger.GetInstance(config.Logger)
+	logger.Info("Logger is successfully initialized")
 	//instantiate cassandra connection instance
 	conn := &cassandra.CassandraConn{
 		Hosts:       []string{config.Cassandra.Host},

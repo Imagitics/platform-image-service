@@ -5,12 +5,21 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"os"
+	"sync"
 )
 
-var Logger *zap.Logger
+var logger *zap.Logger
+var once sync.Once
 
-func InitLogger(logger *config.Logger) *zap.Logger {
+//GetInstance returns instance of logger that is a singleton
+func GetInstance(loggerConfig *config.Logger) *zap.Logger {
+	once.Do(func() {
+		logger = initLogger(loggerConfig)
+	})
+	return logger
+}
+
+func initLogger(logger *config.Logger) *zap.Logger {
 	w := zapcore.AddSync(getCoreLogger(logger))
 	core := zapcore.NewCore(
 		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
@@ -25,11 +34,6 @@ func InitLogger(logger *config.Logger) *zap.Logger {
 
 func getEncoder() zapcore.Encoder {
 	return zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
-}
-
-func getLogWriter(filePath string) zapcore.WriteSyncer {
-	file, _ := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0777)
-	return zapcore.AddSync(file)
 }
 
 func getCoreLogger(logger *config.Logger) *lumberjack.Logger {
