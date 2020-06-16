@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/nik/platform-image-service/logger"
 	"github.com/nik/platform-image-service/pkg/domain/repository"
 	"github.com/nik/platform-image-service/pkg/domain/service"
 	"github.com/nik/platform-image-service/pkg/infra/cassandra"
@@ -21,6 +22,9 @@ func main() {
 		//halt bootstrapping
 		fmt.Println("Error in loading configuration - ", err)
 	}
+
+	logger.InitLogger(config.Logger)
+	logger.Logger.Info("Logger is successfully initialized")
 	//instantiate cassandra connection instance
 	conn := &cassandra.CassandraConn{
 		Hosts:       []string{config.Cassandra.Host},
