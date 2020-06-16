@@ -7,4 +7,6 @@ require (
 	github.com/gocql/gocql v0.0.0-20200526081602-cd04bd7f22a7
 	github.com/gorilla/mux v1.7.4
 	github.com/sbinet/go-python v0.1.0 // indirect
+	go.uber.org/zap v1.15.0
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
