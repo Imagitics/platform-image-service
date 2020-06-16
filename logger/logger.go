@@ -10,16 +10,17 @@ import (
 
 var Logger *zap.Logger
 
-func InitLogger(config *config.ConfigModel) {
-	w := zapcore.AddSync(getCoreLogger(config.Logger))
+func InitLogger(logger *config.Logger) *zap.Logger {
+	w := zapcore.AddSync(getCoreLogger(logger))
 	core := zapcore.NewCore(
 		zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()),
 		w,
 		zap.InfoLevel,
 	)
-	logger := zap.New(core)
 
-	Logger = logger
+	Logger := zap.New(core)
+
+	return Logger
 }
 
 func getEncoder() zapcore.Encoder {
