@@ -11,11 +11,16 @@ import (
 var logger *zap.Logger
 var once sync.Once
 
-//GetInstance returns instance of logger that is a singleton
-func GetInstance(loggerConfig *config.Logger) *zap.Logger {
+//InitInstance instantiates the instance of logger that is a singleton
+func InitInstance(loggerConfig *config.Logger) *zap.Logger {
 	once.Do(func() {
 		logger = initLogger(loggerConfig)
 	})
+	return logger
+}
+
+//GetInstance returns instance of logger that is a singleton
+func GetInstance() *zap.Logger {
 	return logger
 }
 
