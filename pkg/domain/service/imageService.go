@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/nik/platform-image-service/config"
+	"github.com/nik/platform-image-service/logger"
 	"github.com/nik/platform-image-service/pkg/domain/model"
 	"github.com/nik/platform-image-service/pkg/domain/repository"
 	"github.com/nik/platform-image-service/utility"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,7 +20,7 @@ import (
 )
 
 const apiName = "google_image_search_api"
-const maxImages = 20
+const maxImages = 100
 const batchSize = 10
 const rootBucketName = "imagiticstest01"
 
@@ -97,16 +99,16 @@ func (instace *ImageService) search(request *model.ImageRequest) (response *mode
 		_ = json.Unmarshal(body, &data)
 	}
 
-	fmt.Println(data)
-
 	return &data
 }
 
 func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm string, searchTermAlias string) error {
 	//retrieve api metadata for this tenant
 	apiKey, apiUrl, searchEngineId, error := instance.apiService.GetAPIKeyUrlAndSearchEngineID(tenantID, apiName)
+	logger := logger.GetInstance()
 
 	if error != nil {
+		logger.Info("Responding with ", zap.String("error code", error.Error()))
 		return errors.New("Unauthorized request")
 	}
 
@@ -127,6 +129,7 @@ func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm
 		rootFilePath := "/tmp/s3upload/"
 		fileFormat := ".jpg"
 		os.Mkdir(rootFilePath, 0777)
+
 		for counter := 1; counter < maxImages; counter = counter + batchSize {
 			searchRequest := &model.ImageRequest{TenantID: tenantID,
 				APIKey:         apiKey,
@@ -140,10 +143,11 @@ func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm
 			//invoke search api with searchRequest
 			imageRes := instance.search(searchRequest)
 
-			for counter := 0; counter < len(imageRes.Items); counter++ {
-				imageTitle := imageRes.Items[counter].Title
-				instance.uploadImageToStore(tenantID, searchTermAlias, imageRes.Items[counter].Link, rootFilePath+strconv.Itoa(counter)+fileFormat)
-				storeUrlByImageTitle[imageTitle] = imageRes.Items[counter].Link
+			for imageCounter := 0; imageCounter < len(imageRes.Items); imageCounter++ {
+				imageCount = imageCount + 1
+				imageTitle := imageRes.Items[imageCounter].Title
+				instance.uploadImageToStore(tenantID, searchTermAlias, imageRes.Items[imageCounter].Link, rootFilePath+strconv.Itoa(imageCount)+fileFormat)
+				storeUrlByImageTitle[imageTitle] = imageRes.Items[imageCounter].Link
 			}
 		}
 		os.Remove(rootFilePath)
@@ -152,6 +156,9 @@ func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm
 }
 
 func (instance *ImageService) uploadImageToStore(tenantID string, searchTermAlias string, linkUrl string, filePath string) (int, error) {
+	logger := logger.GetInstance()
+
+	//create s3 upload request
 	s3FileUploadReq := &model.S3UploadRequest{
 		Bucket:    rootBucketName + tenantID,
 		TenantId:  tenantID,
@@ -160,6 +167,7 @@ func (instance *ImageService) uploadImageToStore(tenantID string, searchTermAlia
 
 	e, err := json.Marshal(s3FileUploadReq)
 	if err != nil {
+		logger.Info("Responding with ", zap.String("error", err.Error()))
 		return http.StatusBadRequest, errors.New("Invalid request")
 	}
 	//continue to s3 upload operation
@@ -179,17 +187,17 @@ func (instance *ImageService) uploadImageToStore(tenantID string, searchTermAlia
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
-		log.Fatal(err)
+		logger.Info("File upload operation to s3 failed with", zap.String("error", err.Error()))
 	} else {
 		body := &bytes.Buffer{}
 		_, err := body.ReadFrom(resp.Body)
 		if err != nil {
-			log.Fatal(err)
+			logger.Info("File upload operation to s3 failed with", zap.String("error", err.Error()))
+		} else {
+			fmt.Println(filePath + "-" + body.String())
 		}
 		resp.Body.Close()
-		fmt.Println(resp.StatusCode)
-		fmt.Println(resp.Header)
-		fmt.Println(body)
 	}
+
 	return http.StatusCreated, nil
 }
