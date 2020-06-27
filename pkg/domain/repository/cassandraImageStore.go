@@ -50,3 +50,14 @@ func (repo *CassandraImageStoreMetadataRepo) Get(tenantID string, searchTerm str
 		return imageStoreData, nil
 	}
 }
+
+// GetMetadataByTenantID retrieves aws metadata for a provided tenant identifier.
+// This metadata includes secret key, access key and preferred_region.
+func (repo *CassandraImageStoreMetadataRepo) Insert(data *model.ImageStoreData) (bool, error) {
+	if err := repo.session.Query("INSERT INTO image_metadata(tenant_id, search_term, search_term_alias, image_count, store_type, image_store_by_title) VALUES(?, ?, ?, ?, ?,?)",
+		data.TenantId, data.Searchterm, data.SearchTermAlias, data.ImageCount, data.StoreType, data.StoreUrlByImageURL).Exec(); err != nil {
+		return false, err
+	} else {
+		return true, nil
+	}
+}

@@ -21,4 +21,5 @@ type SearchAPIImageRequest struct {
 	TenantID    string `json:"tenantId"`
 	SearchTerm  string `json:"searchTerm"`
 	IncludeFace bool   `json:"includeFace"`
+	SearchAlias string `json:"searchAlias"`
 }

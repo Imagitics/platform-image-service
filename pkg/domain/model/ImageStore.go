@@ -10,8 +10,8 @@ type ImageStoreData struct {
 }
 
 type S3UploadRequest struct {
-	Bucket   string `json:"bucket"`
-	TenantId string `json:"tenant_id"`
-	Directory   string `json:"directory"`
-	Region   string `json:"region"`
+	Bucket    string `json:"bucket"`
+	TenantId  string `json:"tenant_id"`
+	Directory string `json:"directory"`
+	Region    string `json:"region"`
 }

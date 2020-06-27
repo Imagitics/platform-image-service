@@ -20,7 +20,7 @@ import (
 )
 
 const apiName = "google_image_search_api"
-const maxImages = 100
+const maxImages = 20
 const batchSize = 10
 const rootBucketName = "imagiticstest01"
 
@@ -129,8 +129,9 @@ func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm
 		rootFilePath := "/tmp/s3upload/"
 		fileFormat := ".jpg"
 		os.Mkdir(rootFilePath, 0777)
+		totalNumImages := 0
 
-		for counter := 1; counter < maxImages; counter = counter + batchSize {
+		for counter := 1; totalNumImages < maxImages; counter = counter + batchSize {
 			searchRequest := &model.ImageRequest{TenantID: tenantID,
 				APIKey:         apiKey,
 				SearchEngineID: searchEngineId,
@@ -146,10 +147,29 @@ func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm
 			for imageCounter := 0; imageCounter < len(imageRes.Items); imageCounter++ {
 				imageCount = imageCount + 1
 				imageTitle := imageRes.Items[imageCounter].Title
-				instance.uploadImageToStore(tenantID, searchTermAlias, imageRes.Items[imageCounter].Link, rootFilePath+strconv.Itoa(imageCount)+fileFormat)
-				storeUrlByImageTitle[imageTitle] = imageRes.Items[imageCounter].Link
+				_, err := instance.uploadImageToStore(tenantID, searchTermAlias, imageRes.Items[imageCounter].Link, rootFilePath+strconv.Itoa(imageCount)+fileFormat)
+				if err == nil {
+					//error implies some problem in uploading the image to s3
+					//simply skip this image and move on
+					storeUrlByImageTitle[imageTitle] = imageRes.Items[imageCounter].Link
+					totalNumImages = totalNumImages + 1
+				}
 			}
 		}
+
+		//perform the checkpointing by updating storage record
+		if storeUrlByImageTitle != nil && len(storeUrlByImageTitle) > 0 {
+			imageStoreData := &model.ImageStoreData{
+				TenantId:           tenantID,
+				ImageCount:         totalNumImages,
+				Searchterm:         searchTerm,
+				SearchTermAlias:    searchTermAlias,
+				StoreType:          "aws_s3_storage",
+				StoreUrlByImageURL: storeUrlByImageTitle,
+			}
+			instance.repo.Insert(imageStoreData)
+		}
+
 		os.Remove(rootFilePath)
 	}
 	return nil
@@ -178,25 +198,26 @@ func (instance *ImageService) uploadImageToStore(tenantID string, searchTermAlia
 	//download file and upload to s3
 	err = utility.DownloadFile(filePath, linkUrl)
 	if err != nil {
-		fmt.Println("Error in downloading the file")
-	}
-	request, err := utility.NewfileUploadRequest(instance.config.Platform_S3_URL, extraParams, "entity", filePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(request)
-	if err != nil {
-		logger.Info("File upload operation to s3 failed with", zap.String("error", err.Error()))
+		return http.StatusInternalServerError, err
 	} else {
-		body := &bytes.Buffer{}
-		_, err := body.ReadFrom(resp.Body)
+		request, err := utility.NewfileUploadRequest(instance.config.Platform_S3_URL, extraParams, "entity", filePath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		client := &http.Client{}
+		resp, err := client.Do(request)
 		if err != nil {
 			logger.Info("File upload operation to s3 failed with", zap.String("error", err.Error()))
 		} else {
-			fmt.Println(filePath + "-" + body.String())
+			body := &bytes.Buffer{}
+			_, err := body.ReadFrom(resp.Body)
+			if err != nil {
+				logger.Info("File upload operation to s3 failed with", zap.String("error", err.Error()))
+			} else {
+				fmt.Println(filePath + "-" + body.String())
+			}
+			resp.Body.Close()
 		}
-		resp.Body.Close()
 	}
 
 	return http.StatusCreated, nil
