@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/nik/platform-image-service/logger"
 	"github.com/nik/platform-image-service/pkg/domain/service"
 	"github.com/nik/platform-image-service/web/rest/model"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -59,15 +61,19 @@ func (api *Api) search(w http.ResponseWriter, r *http.Request) {
 
 //collectImages collects images for the search term and upload to store type
 func (api *Api) collectImages(w http.ResponseWriter, r *http.Request) {
+	logger := logger.GetInstance()
 	imageSearchRequest, errorCode, err := validateAndRetriveSearchRequest(r)
 	if err != nil {
+		logger.Info("Responding with ", zap.String("error code", err.Error()))
 		respondWithJSON(w, errorCode, fmt.Sprintf(err.Error()))
 	} else {
 		searchTermAlias := retrieveSearchTermAlias(r, imageSearchRequest)
 		err := api.imageSearchService.SearchAndCollectImages(imageSearchRequest.TenantID, imageSearchRequest.SearchTerm, searchTermAlias)
 		if err != nil {
+			logger.Info("Responding with ", zap.String("error code", err.Error()))
 			respondWithJSON(w, http.StatusInternalServerError, fmt.Sprintf("No results found for search term %s", imageSearchRequest.SearchTerm))
 		} else {
+			logger.Info("Responding with success")
 			respondWithJSON(w, http.StatusOK, fmt.Sprintf("Request successfully accepted"))
 		}
 	}
@@ -119,6 +125,11 @@ func validateAndRetriveSearchRequest(r *http.Request) (*model.SearchAPIImageRequ
 		return nil, 400, err
 	}
 
+	searchAlias := r.URL.Query().Get("search_alias")
+	if err := validateSearchTerm(searchTerm); err != nil {
+		return nil, 400, err
+	}
+
 	includeFace := false
 	if value, err := retrieveIncludeFace(r.URL.Query().Get("include_face")); err != nil {
 		return nil, 400, err
@@ -130,6 +141,7 @@ func validateAndRetriveSearchRequest(r *http.Request) (*model.SearchAPIImageRequ
 		TenantID:    tenantId,
 		SearchTerm:  searchTerm,
 		IncludeFace: includeFace,
+		SearchAlias: searchAlias,
 	}
 
 	return imageRequest, 0, nil
