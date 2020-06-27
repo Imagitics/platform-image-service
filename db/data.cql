@@ -1,4 +1,4 @@
-CREATE KEYSPACE platform_image_db  with replication = {'class':'SimpleStrategy'};
+CREATE KEYSPACE platform_image_db  with replication = {'class':'SimpleStrategy', 'replication_factor' : 3};
 use platform_image_db;
 
 CREATE TYPE platform_image_db.image_store_data (
