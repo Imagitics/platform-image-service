@@ -67,8 +67,7 @@ func (api *Api) collectImages(w http.ResponseWriter, r *http.Request) {
 		logger.Info("Responding with ", zap.String("error code", err.Error()))
 		respondWithJSON(w, errorCode, fmt.Sprintf(err.Error()))
 	} else {
-		searchTermAlias := retrieveSearchTermAlias(r, imageSearchRequest)
-		err := api.imageSearchService.SearchAndCollectImages(imageSearchRequest.TenantID, imageSearchRequest.SearchTerm, searchTermAlias)
+		err := api.imageSearchService.SearchAndCollectImages(imageSearchRequest.TenantID, imageSearchRequest.SearchTerm, imageSearchRequest.SearchAlias)
 		if err != nil {
 			logger.Info("Responding with ", zap.String("error code", err.Error()))
 			respondWithJSON(w, http.StatusInternalServerError, fmt.Sprintf("No results found for search term %s", imageSearchRequest.SearchTerm))
@@ -126,9 +125,8 @@ func validateAndRetriveSearchRequest(r *http.Request) (*model.SearchAPIImageRequ
 	}
 
 	searchAlias := r.URL.Query().Get("search_alias")
-	if err := validateSearchTerm(searchTerm); err != nil {
-		return nil, 400, err
-	}
+	appName := r.URL.Query().Get("app_name")
+	searchAlias = retrieveSearchTermAlias(searchAlias, searchTerm, appName)
 
 	includeFace := false
 	if value, err := retrieveIncludeFace(r.URL.Query().Get("include_face")); err != nil {
@@ -171,12 +169,13 @@ func (a *Api) InitializeRoutes() {
 }
 
 //retrieveSearchTermAlias validates the search term alias
-func retrieveSearchTermAlias(r *http.Request, model *model.SearchAPIImageRequest) string {
-	// validate tenant
-	vars := mux.Vars(r)
-	searchTermAlias := vars["searchTermAlias"]
+func retrieveSearchTermAlias(searchTermAlias string, searchTerm string, appName string) string {
 	if searchTermAlias == "" {
-		searchTermAlias = model.SearchTerm
+		//check whether searchTermAlias is empty
+		searchTermAlias = searchTerm
+	}
+	if appName != "" {
+		searchTermAlias = appName + "/" + searchTermAlias
 	}
 
 	return searchTermAlias

@@ -17,12 +17,13 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 )
 
 const apiName = "google_image_search_api"
 const maxImages = 20
 const batchSize = 10
-const rootBucketName = "imagiticstest01"
+const rootBucketName = "imagitics"
 
 type ImageService struct {
 	apiService *APIService
@@ -147,7 +148,7 @@ func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm
 			for imageCounter := 0; imageCounter < len(imageRes.Items); imageCounter++ {
 				imageCount = imageCount + 1
 				imageTitle := imageRes.Items[imageCounter].Title
-				_, err := instance.uploadImageToStore(tenantID, searchTermAlias, imageRes.Items[imageCounter].Link, rootFilePath+strconv.Itoa(imageCount)+fileFormat)
+				_, err := instance.uploadImageToStore(tenantID, searchTerm, searchTermAlias, imageRes.Items[imageCounter].Link, rootFilePath+strconv.Itoa(imageCount)+fileFormat)
 				if err == nil {
 					//error implies some problem in uploading the image to s3
 					//simply skip this image and move on
@@ -175,14 +176,15 @@ func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm
 	return nil
 }
 
-func (instance *ImageService) uploadImageToStore(tenantID string, searchTermAlias string, linkUrl string, filePath string) (int, error) {
+func (instance *ImageService) uploadImageToStore(tenantID string, searchTerm string, searchTermAlias string, linkUrl string, filePath string) (int, error) {
 	logger := logger.GetInstance()
 
 	//create s3 upload request
 	s3FileUploadReq := &model.S3UploadRequest{
-		Bucket:    rootBucketName + tenantID,
+		Bucket:    rootBucketName + strings.ToLower(tenantID),
 		TenantId:  tenantID,
 		Directory: searchTermAlias,
+		FilePath:  filePath,
 	}
 
 	e, err := json.Marshal(s3FileUploadReq)

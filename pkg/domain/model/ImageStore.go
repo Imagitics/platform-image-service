@@ -13,5 +13,6 @@ type S3UploadRequest struct {
 	Bucket    string `json:"bucket"`
 	TenantId  string `json:"tenant_id"`
 	Directory string `json:"directory"`
+	FilePath  string `json:"filepath"`
 	Region    string `json:"region"`
 }
