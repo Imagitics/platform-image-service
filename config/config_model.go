@@ -11,10 +11,15 @@ type ConfigModel struct {
 		Consistency string `json:"consistency"`
 		Keyspace    string `json:"keyspace"`
 	}
-	Logger *Logger `json:"logger"`
+	Logger    *Logger    `json:"logger"`
+	Messaging *Messaging `json:"messaging"`
 }
 
 type Logger struct {
 	LoggerFilePath string `json:"logger_file_path"`
 	LoggerFileName string `json:"logger_file_name"`
+}
+
+type Messaging struct {
+	Region string `json:"region"`
 }
