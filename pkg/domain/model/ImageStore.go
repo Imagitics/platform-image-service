@@ -1,12 +1,12 @@
 package model
 
 type ImageStoreData struct {
-	TenantId           string
-	Searchterm         string
-	SearchTermAlias    string
-	StoreType          string
-	ImageCount         int
-	StoreUrlByImageURL map[string]string
+	TenantId           string            `json:"tenant_id"`
+	Searchterm         string            `json:"search_term"`
+	SearchTermAlias    string            `json:"search_term_alias"`
+	StoreType          string            `json:"store_type"`
+	ImageCount         int               `json:"image_count"`
+	StoreUrlByImageURL map[string]string `json:"bucket"`
 }
 
 type S3UploadRequest struct {
