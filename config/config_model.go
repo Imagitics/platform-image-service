@@ -23,7 +23,8 @@ type Logger struct {
 }
 
 type Messaging struct {
-	Region string `json:"region"`
+	Region                           string `json:"region"`
+	CollectImageRequestedEventStream string `json:"collect_image_reuqest_event_stream"`
 }
 
 type AWS struct {
