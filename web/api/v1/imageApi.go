@@ -67,6 +67,7 @@ func (api *Api) collectImages(w http.ResponseWriter, r *http.Request) {
 		logger.Info("Responding with ", zap.String("error code", err.Error()))
 		respondWithJSON(w, errorCode, fmt.Sprintf(err.Error()))
 	} else {
+		//err := api.imageSearchService.PublishCollectImageEvent(imageSearchRequest)
 		err := api.imageSearchService.SearchAndCollectImages(imageSearchRequest.TenantID, imageSearchRequest.SearchTerm, imageSearchRequest.SearchAlias)
 		if err != nil {
 			logger.Info("Responding with ", zap.String("error code", err.Error()))
