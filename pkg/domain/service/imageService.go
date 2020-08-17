@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/nik/platform-image-service/config"
 	"github.com/nik/platform-image-service/logger"
 	"github.com/nik/platform-image-service/pkg/domain/model"
 	"github.com/nik/platform-image-service/pkg/domain/repository"
+	"github.com/nik/platform-image-service/pkg/infra/messaging"
 	"github.com/nik/platform-image-service/utility"
+	model2 "github.com/nik/platform-image-service/web/rest/model"
 	"go.uber.org/zap"
 	"io/ioutil"
 	"log"
@@ -25,17 +28,22 @@ const maxImages = 20
 const batchSize = 10
 const rootBucketName = "imagitics"
 
+var stream *string
+
 type ImageService struct {
 	apiService *APIService
 	repo       repository.ImageStore
 	config     *config.ConfigModel
+	messaging  messaging.MessagingServiceInterface
 }
 
-func NewImageService(apiServiceInstance *APIService, imageStoreMetadataRepo repository.ImageStore, config *config.ConfigModel) (imageSearchInstance *ImageService) {
+func NewImageService(apiServiceInstance *APIService, imageStoreMetadataRepo repository.ImageStore, messagingInstance messaging.MessagingServiceInterface, config *config.ConfigModel) (imageSearchInstance *ImageService) {
+	stream = flag.String("stream", config.Messaging.CollectImageRequestedEventStream, config.Messaging.CollectImageRequestedEventStream)
 	return &ImageService{
 		apiService: apiServiceInstance,
 		repo:       imageStoreMetadataRepo,
 		config:     config,
+		messaging:  messagingInstance,
 	}
 }
 
@@ -103,10 +111,30 @@ func (instace *ImageService) search(request *model.ImageRequest) (response *mode
 	return &data
 }
 
+func (instance *ImageService) PublishCollectImageEvent(searchRequst *model2.SearchAPIImageRequest) error {
+	logger := logger.GetInstance()
+	//get the json message
+	searchReqJson, err := json.Marshal(searchRequst)
+	if err != nil {
+		logger.Sugar().Errorf("Can not  event %s to stream %s failed with error - ", err.Error())
+		return err
+	}
+	//publish the search request
+	pubResponse, err := instance.messaging.Publish(stream, searchRequst.TenantID, string(searchReqJson))
+	if err != nil {
+		logger.Error("Error in producing event to stream", zap.String("error", err.Error()))
+		return err
+	}
+
+	logger.Sugar().Infof("Event is published to stream %s in partition %s at offset %s", stream, pubResponse.SeqNum, pubResponse.ShardId)
+	return nil
+}
+
 func (instance *ImageService) SearchAndCollectImages(tenantID string, searchTerm string, searchTermAlias string) error {
+	logger := logger.GetInstance()
+
 	//retrieve api metadata for this tenant
 	apiKey, apiUrl, searchEngineId, error := instance.apiService.GetAPIKeyUrlAndSearchEngineID(tenantID, apiName)
-	logger := logger.GetInstance()
 
 	if error != nil {
 		logger.Info("Responding with ", zap.String("error code", error.Error()))
@@ -209,7 +237,7 @@ func (instance *ImageService) uploadImageToStore(tenantID string, searchTerm str
 		client := &http.Client{}
 		resp, err := client.Do(request)
 		if err != nil {
-			logger.Info("File upload operation to s3 failed with", zap.String("error", err.Error()))
+			logger.Sugar().Infof("File upload operation to s3 failed with error %s", err.Error())
 		} else {
 			body := &bytes.Buffer{}
 			_, err := body.ReadFrom(resp.Body)
